@@ -1,0 +1,43 @@
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+*.nb.html
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/settings.local.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data
+data/raw/
+data/processed/
+*.csv
+*.parquet
+*.xlsx
+
+# Misc
+.env
+.env.local
+*.log

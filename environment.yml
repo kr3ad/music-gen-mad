@@ -1,0 +1,31 @@
+name: music-gen-mad
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - uv
+  - conda-lock
+  # Jupyter
+  - jupyter
+  - jupyterlab
+  - ipykernel
+  - ipython
+  - nb_conda_kernels
+  # Data Science
+  - numpy
+  - pandas
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - scipy
+  # Machine Learning
+  - tensorflow
+  - pytorch
+  - torchvision
+  - torchaudio
+  # Development
+  - pytest
+  - black
+  - ruff
+  - mypy

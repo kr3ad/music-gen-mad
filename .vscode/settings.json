@@ -1,0 +1,15 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}",
+  "notebook.formatOnSave": true,
+  "notebook.lineNumbers": "on",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.formatOnSave": true
+  },
+  "[jupyter]": {
+    "editor.defaultFormatter": "ms-python.python"
+  },
+  "python.linting.enabled": true,
+  "python.linting.ruffEnabled": true,
+  "jupyter.kernels.preferred": []
+}
