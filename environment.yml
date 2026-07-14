@@ -24,8 +24,14 @@ dependencies:
   - pytorch
   - torchvision
   - torchaudio
+  - transformers
   # Development
   - pytest
   - black
   - ruff
   - mypy
+  # Music
+  - librosa
+  - pip:
+    - torch
+prefix: /home/kross1/music-integration/music-gen-mad/env
