@@ -63,6 +63,22 @@ def compute_mad_by_layer(self_attentions, seq_len):
         mean_distances[layer_idx] = head_mean_distances.cpu().numpy()
     return mean_distances
 
+def compute_relative_attention_entropy(attentions, eps=1e-12):
+    """
+    attentions shape: [layers, 1, heads, seq_len, seq_len]
+    returns: [layers, heads] tensor of mean entropy per head
+    """
+    seq_length = attentions.shape[-1]
+    # Clip values to avoid log(0)
+    attns = torch.clamp(attentions, min=eps)
+    
+    # Calculate row-wise Shannon Entropy: -sum(p * log2(p))
+    entropy_per_query = -torch.sum(attns * torch.log2(attns), dim=-1) # Shape: [layers, heads, seq_len]
+    
+    # Average across all query frames
+    mean_entropy = entropy_per_query.mean(dim=-1) / seq_length # Shape: [layers, heads]
+    return mean_entropy
+
 def plot_mad_single(mean_distances_seconds, num_heads, num_layers=24):
     plt.figure(figsize=(10, 6))
 
