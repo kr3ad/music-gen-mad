@@ -1,20 +1,38 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from transformers import AutoProcessor
+from transformers import AutoProcessor, AutoFeatureExtractor
 import librosa
+import torchaudio
 
-def load_process_bulk_audio(paths, processor=AutoProcessor.from_pretrained("facebook/musicgen-small")):
-    inputs = {}
+def load_process_bulk_audio(paths, sr=16000):
+    waveforms = {}
     for path in paths:
-        audio, sr = librosa.load(path, sr=32000, duration=60.0)  # Analyze the first 10 seconds
+        audio, sr = librosa.load(path, sr=sr)  # Analyze the first 10 seconds
+        waveforms[path] = audio, sr
+    return waveforms
 
-        # Preprocess the audio and an optional text query to guide the cross-attention analysis
+def process_bulk_music_gen(waveforms, processor=AutoProcessor.from_pretrained("facebook/musicgen-small")):
+    # Preprocess the audio and an optional text query to guide the cross-attention analysis
+    inputs = {}
+    for path, item in waveforms.items():
+        wf, sr = item
         input = processor(
-            audio=audio,
+            audio=wf,
             sampling_rate=sr,
             text=[""],  # Optional text to analyze cross-attention alignments
-            padding=True,
+            return_tensors="pt"
+        )
+        inputs[path] = input
+    return inputs
+
+def process_bulk_wave2vec(waveforms, feature_extractor=AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base-960h")):
+    inputs = {}
+    for path, item in waveforms.items():
+        wf, sr = item
+        input = feature_extractor(
+            wf,
+            sampling_rate=sr,
             return_tensors="pt"
         )
         inputs[path] = input
@@ -31,7 +49,7 @@ def compute_mad_by_layer(self_attentions, seq_len):
     distance_matrix = np.abs(steps[:, None] - steps[None, :])
 
     # 2. Convert steps directly to seconds: 1 step = 0.02 seconds (20ms)
-    distance_in_seconds = distance_matrix / frame_rate
+    distance_in_seconds = distance_matrix / seq_len
     distance_tensor_sec = torch.tensor(distance_in_seconds, dtype=torch.float32, device=self_attentions[0].device)
 
     # 3. Compute Mean Attention Distance in seconds
@@ -48,7 +66,7 @@ def compute_mad_by_layer(self_attentions, seq_len):
         mean_distances_seconds[layer_idx] = head_mean_distances.cpu().numpy()
     return mean_distances_seconds
 
-def plot_mad(mean_distances_seconds, num_heads, num_layers=24):
+def plot_mad_single(mean_distances_seconds, num_heads, num_layers=24):
     plt.figure(figsize=(10, 6))
 
     # for layer in range(num_layers):
