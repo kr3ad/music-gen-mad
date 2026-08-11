@@ -1,7 +1,9 @@
+from functools import partial
+
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from transformers import AutoProcessor, AutoFeatureExtractor
+from transformers import AutoProcessor, AutoFeatureExtractor, MusicgenForConditionalGeneration
 import librosa
 import torchaudio
 
@@ -38,6 +40,53 @@ def process_bulk_wave2vec(waveforms, feature_extractor=AutoFeatureExtractor.from
         inputs[path] = input
     return inputs
 
+def load_music_gen_model():
+    processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
+    model = MusicgenForConditionalGeneration.from_pretrained(
+        "facebook/musicgen-small",
+        attn_implementation="eager"
+    )
+    model.eval()
+    return model, processor
+
+def shuffle_pos_embed_hook(module, input, output, chunk_size=1):
+    chunks = torch.split(output, split_size_or_sections=chunk_size, dim=0)
+    perm = torch.randperm(len(chunks), device=output.device)
+    return torch.cat([chunks[i] for i in perm], dim=0)
+
+def extract_attentions(model, inputs_dict, chunk_size=None):
+    target_layer = model.decoder.model.decoder.embed_positions
+    handle = None
+    if chunk_size is not None:
+        handle = target_layer.register_forward_hook(
+            partial(shuffle_pos_embed_hook, chunk_size=chunk_size)
+        )
+
+    attentions = {}
+    with torch.no_grad():
+        for path, inputs in inputs_dict.items():
+            audio_features = inputs["input_values"]
+            decoder_input_ids = model.audio_encoder.encode(audio_features).audio_codes
+            batch_size = decoder_input_ids.shape[0]
+            dummy_encoder_hidden_states = torch.zeros(
+                batch_size,
+                1,
+                1024,
+                device=decoder_input_ids.device
+            )
+            decoder_outputs = model.decoder(
+                input_ids=decoder_input_ids,
+                encoder_hidden_states=dummy_encoder_hidden_states,
+                output_attentions=True,
+                return_dict=True
+            )
+            attentions[path] = decoder_outputs.attentions
+
+    if handle is not None:
+        handle.remove()
+
+    return attentions
+
 def compute_mad_by_layer(self_attentions, seq_len):
     # 1. Construct the pairwise distance matrix in steps
     num_layers = len(self_attentions)
@@ -62,6 +111,13 @@ def compute_mad_by_layer(self_attentions, seq_len):
 
         mean_distances[layer_idx] = head_mean_distances.cpu().numpy()
     return mean_distances
+
+def compute_mad_dict(attentions_dict):
+    mad_dict = {}
+    for path, attn in attentions_dict.items():
+        seq_length = attn[0].shape[-1]
+        mad_dict[path] = compute_mad_by_layer(attn, seq_length)
+    return mad_dict
 
 def compute_relative_attention_entropy(attentions, eps=1e-12):
     """
