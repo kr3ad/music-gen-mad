@@ -67,16 +67,10 @@ def extract_attentions(model, inputs_dict, chunk_size=None):
         for path, inputs in inputs_dict.items():
             audio_features = inputs["input_values"]
             decoder_input_ids = model.audio_encoder.encode(audio_features).audio_codes
-            batch_size = decoder_input_ids.shape[0]
-            dummy_encoder_hidden_states = torch.zeros(
-                batch_size,
-                1,
-                1024,
-                device=decoder_input_ids.device
-            )
+            print(decoder_input_ids.shape)
             decoder_outputs = model.decoder(
                 input_ids=decoder_input_ids,
-                encoder_hidden_states=dummy_encoder_hidden_states,
+                encoder_hidden_states=None,
                 output_attentions=True,
                 return_dict=True
             )
